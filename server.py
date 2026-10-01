@@ -163,7 +163,7 @@ class BoloBackendHandler(http.server.SimpleHTTPRequestHandler):
                     self.wfile.write(json.dumps({"error": "No Gemini API key configured on server."}).encode('utf-8'))
                     return
 
-                models = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-3.8-flash"]
+                models = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-flash-lite-latest", "gemini-3.5-flash", "gemini-3.8-flash"]
                 last_err = None
                 gemini_result = None
 
@@ -183,7 +183,7 @@ class BoloBackendHandler(http.server.SimpleHTTPRequestHandler):
                             headers={'Content-Type': 'application/json', 'User-Agent': 'Bolo-Backend/1.0'},
                             method='POST'
                         )
-                        with urllib.request.urlopen(req, timeout=15) as g_resp:
+                        with urllib.request.urlopen(req, timeout=6) as g_resp:
                             gemini_result = json.loads(g_resp.read().decode('utf-8'))
                             break
                     except Exception as ge:
