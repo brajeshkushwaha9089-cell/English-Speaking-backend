@@ -25,6 +25,11 @@ except ImportError:
     SUPABASE_SEC_KEY = os.environ.get("SUPABASE_SEC_KEY", "")
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
+try:
+    import seed_data
+except ImportError:
+    seed_data = None
+
 def get_free_port():
     preferred_ports = [8000, 8080, 5000, 5500, 3000]
     for p in preferred_ports:
@@ -57,13 +62,20 @@ class BoloBackendHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             welcome = {
-                "service": "Bolo English AI Speaking Backend",
+                "service": "English Speaking Coach Backend API",
                 "status": "online",
                 "geminiReady": bool(GEMINI_API_KEY),
                 "supabaseReady": bool(SUPABASE_URL and SUPABASE_SEC_KEY),
                 "endpoints": {
                     "health": "/",
                     "geminiChat": "POST /api/gemini/chat",
+                    "lessons": "GET /api/lessons",
+                    "grammar": "GET /api/grammar",
+                    "speakingExercises": "GET /api/speaking/exercises",
+                    "conversationScenarios": "GET /api/conversations/scenarios",
+                    "sentenceBuilder": "GET /api/sentence-builder",
+                    "pronunciation": "GET /api/pronunciation",
+                    "dailyChallenges": "GET /api/challenges/today",
                     "supabaseStatus": "GET /api/supabase/status",
                     "supabaseLoad": "GET /api/supabase/load?userId={id}",
                     "supabaseSave": "POST /api/supabase/save"
@@ -71,6 +83,30 @@ class BoloBackendHandler(http.server.SimpleHTTPRequestHandler):
             }
             self.wfile.write(json.dumps(welcome, indent=2).encode('utf-8'))
             return
+
+        # Learning Modules REST API
+        if seed_data:
+            routes = {
+                '/api/lessons': seed_data.LESSONS,
+                '/api/grammar': seed_data.GRAMMAR_TOPICS,
+                '/api/speaking/exercises': seed_data.SPEAKING_EXERCISES,
+                '/api/conversations/scenarios': seed_data.CONVERSATION_SCENARIOS,
+                '/api/sentence-builder': seed_data.SENTENCE_BUILDER_ITEMS,
+                '/api/pronunciation': seed_data.PRONUNCIATION_TOPICS,
+                '/api/challenges/today': seed_data.DAILY_CHALLENGES
+            }
+            clean_path = self.path.split('?')[0].rstrip('/')
+            if clean_path in routes:
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                response = {
+                    "success": True,
+                    "count": len(routes[clean_path]),
+                    "data": routes[clean_path]
+                }
+                self.wfile.write(json.dumps(response, indent=2).encode('utf-8'))
+                return
 
         if self.path.startswith('/api/supabase/status'):
             self.send_response(200)
