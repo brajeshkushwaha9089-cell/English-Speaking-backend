@@ -1,0 +1,2 @@
+# Bolo English Backend Requirements
+# Standard Python 3 libraries are used (zero external dependencies required)

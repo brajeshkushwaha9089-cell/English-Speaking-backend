@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: bolo-english-backend
+    env: python
+    buildCommand: ""
+    startCommand: python server.py
+    envVars:
+      - key: SUPABASE_URL
+        value: https://jyatlsllsdmtdmvohhfz.supabase.co
+      - key: SUPABASE_PUB_KEY
+        sync: false
+      - key: SUPABASE_SEC_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
