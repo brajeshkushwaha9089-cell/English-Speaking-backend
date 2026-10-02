@@ -1357,3 +1357,151 @@ DAILY_CHALLENGES = [
      "task": "Engage in an interactive roleplay session with your chosen coach.",
      "target_seconds": 120}
 ]
+
+# =========================================================================
+# AI INTERVIEW INTELLIGENCE & PERSONAL INTERVIEW COACH SEED DATA
+# =========================================================================
+
+DEFAULT_INTERVIEW_PROFILE = {
+    "name": "Brajesh Kushwaha",
+    "education": "B.Tech in Computer Science & Engineering",
+    "college": "NIAT x SGSU",
+    "degreeBranch": "CSE (Artificial Intelligence)",
+    "currentYear": "Final Year (8th Semester)",
+    "skills": ["JavaScript", "React.js", "Node.js", "Express.js", "Supabase", "REST APIs", "Python", "Git", "Tailwind CSS"],
+    "programmingLanguages": ["JavaScript", "Python", "TypeScript", "SQL", "C++"],
+    "technologies": ["React.js", "Node.js", "Express.js", "Supabase", "PostgreSQL", "HTML5/CSS3", "Vite", "Git/GitHub"],
+    "projects": [
+        {
+            "title": "English Speaking Coach",
+            "tech": "React, Node.js, Express, Supabase, Gemini AI, Web Speech API",
+            "description": "Full-stack AI-powered English speaking and grammar learning platform with live voice bot, real-time speech evaluation, and comprehensive grammar coach.",
+            "challenges": "Optimizing Web Speech API latency, handling multi-turn AI context streaming, and securing API keys.",
+            "contributions": "Architected the backend REST endpoints, built adaptive conversational AI prompts, and created interactive grammar builder puzzles."
+        },
+        {
+            "title": "Expense Tracker",
+            "tech": "React, Node.js, Express, Supabase, Chart.js",
+            "description": "Full-stack personal finance application tracking income, expenses, category analytics, and monthly budgets.",
+            "challenges": "Designing real-time data sync with Supabase and complex aggregations for financial charting.",
+            "contributions": "Built JWT authentication, designed PostgreSQL schemas, and integrated data visualizations."
+        },
+        {
+            "title": "CafeTracker",
+            "tech": "JavaScript, HTML5, CSS3, LocalStorage, Maps API",
+            "description": "Location-based web app for remote developers to discover, rate, and bookmark work-friendly cafes with high-speed Wi-Fi.",
+            "challenges": "Calculating geospatial distance queries and handling responsive mobile map rendering.",
+            "contributions": "Implemented geolocation filters, bookmarking system, and dark mode interface."
+        }
+    ],
+    "projectTechnologies": "React, Node.js, Express, Supabase, PostgreSQL, Gemini AI, JavaScript",
+    "achievements": [
+        "Won 1st Runner Up in University Hackathon 2025 for an AI Web Application.",
+        "Authored open-source starter templates with 50+ GitHub stars.",
+        "Maintained top 5% academic standing in Computer Science cohort."
+    ],
+    "certifications": [
+        "Meta Full-Stack Developer Professional Certificate",
+        "AWS Certified Cloud Practitioner",
+        "Google Cloud AI & Machine Learning Foundations"
+    ],
+    "internshipExp": "Full-Stack Development Intern at InnovateTech Labs (4 months). Worked on frontend performance optimization and REST API endpoints.",
+    "workExp": "Fresher with strong project-based software engineering experience.",
+    "careerGoals": "Aspire to become a Senior Full-Stack Software Engineer and AI Solutions Architect building high-scale developer platforms.",
+    "strengths": ["Strong problem-solving mindset", "Fast learner of new frameworks", "Clear technical communicator and team collaborator"],
+    "areasForImprovement": ["Advanced distributed systems design", "Mastering Docker and Kubernetes orchestration"],
+    "preferredRole": "Full-Stack Developer / Software Engineer",
+    "targetIndustry": "Information Technology & AI Software Products",
+    "experienceLevel": "Fresher (0 - 1 Year)"
+}
+
+INTERVIEW_TYPES = [
+    {"id": "hr", "title": "HR Interview", "icon": "🎯", "category": "HR",
+     "desc": "Cultural fit, self introduction, strengths, weaknesses, work ethics, and salary expectations."},
+    {"id": "technical", "title": "Technical Interview", "icon": "💻", "category": "Technical",
+     "desc": "Core computer science fundamentals, data structures, algorithms, and system problem-solving."},
+    {"id": "aiml", "title": "AI/ML Interview", "icon": "🤖", "category": "Technical",
+     "desc": "Prompt engineering, LLMs, generative AI, Python fundamentals, and modern AI architectures."},
+    {"id": "fullstack", "title": "Full-Stack Interview", "icon": "🌐", "category": "Engineering",
+     "desc": "End-to-end web architecture, frontend-backend communication, security, auth, and database design."},
+    {"id": "frontend", "title": "Frontend Interview", "icon": "🎨", "category": "Engineering",
+     "desc": "Modern HTML5/CSS3, JavaScript ES6+, React ecosystem, DOM performance, and Web APIs."},
+    {"id": "backend", "title": "Backend Interview", "icon": "⚙️", "category": "Engineering",
+     "desc": "Node.js, Express, RESTful APIs, microservices, PostgreSQL, caching, and scalability."},
+    {"id": "javascript", "title": "JavaScript Deep-Dive", "icon": "💛", "category": "Language",
+     "desc": "Closures, event loop, promises, async/await, prototypes, scoping, and ES6+ features."},
+    {"id": "react", "title": "React.js Specialist", "icon": "⚛️", "category": "Framework",
+     "desc": "Hooks, lifecycle, re-renders, Context API, state management, and component optimization."},
+    {"id": "nodejs", "title": "Node.js & Express", "icon": "🟩", "category": "Backend",
+     "desc": "Event loop, streams, middleware pipeline, error handling, clustering, and security."},
+    {"id": "database", "title": "Database & SQL", "icon": "🗄️", "category": "Data",
+     "desc": "Relational schema design, PostgreSQL, indexing, ACID transactions, and Supabase integration."},
+    {"id": "project", "title": "Project Interview & Deep-Dive", "icon": "📁", "category": "Projects",
+     "desc": "Rigorous defense of your personal projects, architectural decisions, hardest bugs, and trade-offs."},
+    {"id": "internship", "title": "Internship Interview", "icon": "🚀", "category": "Early Career",
+     "desc": "Curiosity, foundational knowledge, ability to learn fast, and demonstration of enthusiasm."},
+    {"id": "placement", "title": "Campus Placement Interview", "icon": "🎓", "category": "Placement",
+     "desc": "Structured campus hiring simulation covering introduction, academic projects, and core CS."},
+    {"id": "behavioral", "title": "Behavioral Interview (STAR)", "icon": "🧠", "category": "HR",
+     "desc": "Situation-Task-Action-Result format for team collaboration, conflict resolution, and leadership."},
+    {"id": "mixed", "title": "Comprehensive Mock Interview", "icon": "🔥", "category": "All-in-One",
+     "desc": "The complete corporate hiring loop: Introduction -> Technical -> Project Defense -> Behavioral -> HR."}
+]
+
+INTERVIEW_GOALS = [
+    {"id": "placement", "title": "College Placement", "icon": "🎓", "desc": "Prepare for upcoming on-campus and off-campus recruitment drives."},
+    {"id": "internship", "title": "Internship", "icon": "🚀", "desc": "Secure a summer or winter software development internship."},
+    {"id": "job", "title": "Job Interview", "icon": "💼", "desc": "Target full-time entry-level and junior software engineer positions."},
+    {"id": "technical", "title": "Technical Round", "icon": "💻", "desc": "Sharpen technical clarity, code explanations, and architecture articulation."},
+    {"id": "hr", "title": "HR Round", "icon": "🤝", "desc": "Master behavioral questions, salary discussions, and confidence."},
+    {"id": "practice", "title": "General Practice", "icon": "🎯", "desc": "Build overall interview communication fluency and eliminate nervousness."}
+]
+
+INTERVIEW_QUESTION_BANK = {
+    "introduction": [
+        "Could you please walk me through your background, education, and what sparked your passion for software engineering?",
+        "Tell me about yourself and summarize the key technical projects you have built recently.",
+        "How would you summarize your professional identity and main engineering strengths in 60 seconds?"
+    ],
+    "education": [
+        "Why did you choose to pursue Computer Science and Artificial Intelligence for your degree?",
+        "Which academic subject or semester project did you find most rewarding, and why?",
+        "Can you discuss a technically demanding concept in your curriculum that took significant effort to master?",
+        "How has your university coursework prepared you for the practical demands of this engineering role?"
+    ],
+    "skills": [
+        "What are your strongest technical skills, and how do you decide which technology to use when starting a new build?",
+        "Which programming language are you most comfortable with, and what is one feature of it you admire?",
+        "How do you stay up-to-date with fast-moving web technologies like React and generative AI?",
+        "Can you share an example of a technical tool or framework you learned completely on your own?"
+    ],
+    "projects": [
+        "Can you choose one flagship project from your resume and walk me through its end-to-end architecture?",
+        "What was the most difficult technical bug or architectural obstacle you encountered while building this project, and how did you resolve it?",
+        "Why did you choose your specific database and backend stack over competing alternatives?",
+        "If you had another two weeks to enhance this project, what performance or architectural improvement would you implement first?",
+        "What was your personal individual contribution to the codebase versus pre-built libraries?"
+    ],
+    "behavioral": [
+        "Tell me about a time you faced an unexpected technical roadblock with a tight deadline. How did you handle it? (STAR Method)",
+        "Describe a situation where you had a disagreement with a team member or peer regarding a technical design. How did you reach consensus?",
+        "Can you share an experience where a project or feature failed to meet expectations? What key lessons did you take away?",
+        "Tell me about a time you took the initiative to learn something outside your comfort zone to solve an urgent problem."
+    ],
+    "achievements": [
+        "What is a personal milestone, competition, or hackathon project you feel particularly proud of?",
+        "Can you describe an achievement that best demonstrates your resilience and persistence when solving problems?"
+    ],
+    "career_goals": [
+        "Where do you envision yourself developing professionally over the next 2 to 3 years?",
+        "What kind of team culture and engineering environment helps you do your best work?",
+        "What specific technical domains or architectures are you eager to master next?"
+    ],
+    "hr": [
+        "Why are you interested in joining our engineering team specifically?",
+        "What is one of your greatest strengths, and what is one technical or communication area you are actively working to improve?",
+        "Why should we select you over other candidates with similar academic backgrounds?",
+        "How do you manage stress and maintain focus during high-pressure production releases or exams?"
+    ]
+}
+

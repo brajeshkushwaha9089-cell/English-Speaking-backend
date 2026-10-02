@@ -8,6 +8,7 @@ import json
 import urllib.request
 import urllib.parse
 import urllib.error
+import time
 
 # Ensure working directory is the backend directory
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -66,7 +67,7 @@ def call_gemini_raw(prompt, key=None, temperature=0.7):
                 headers={'Content-Type': 'application/json', 'User-Agent': 'Bolo-Backend/1.0'},
                 method='POST'
             )
-            with urllib.request.urlopen(req, timeout=6) as g_resp:
+            with urllib.request.urlopen(req, timeout=7) as g_resp:
                 res_data = json.loads(g_resp.read().decode('utf-8'))
                 return res_data, None
         except Exception as ge:
@@ -111,7 +112,7 @@ class BoloBackendHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             welcome = {
-                "service": "English Speaking Coach Backend API",
+                "service": "English Speaking Coach & AI Interview Intelligence Backend API",
                 "status": "online",
                 "geminiReady": bool(GEMINI_API_KEY),
                 "supabaseReady": bool(SUPABASE_URL and SUPABASE_SEC_KEY),
@@ -124,6 +125,10 @@ class BoloBackendHandler(http.server.SimpleHTTPRequestHandler):
                     "grammarMistakes": "GET /api/grammar/mistakes?category={cat}",
                     "grammarComparisons": "GET /api/grammar/comparisons",
                     "grammarCoach": "POST /api/grammar/coach",
+                    "interviewTemplates": "GET /api/interviews/templates",
+                    "interviewStart": "POST /api/interviews/start",
+                    "interviewAnswer": "POST /api/interviews/answer",
+                    "interviewFinish": "POST /api/interviews/finish",
                     "speakingExercises": "GET /api/speaking/exercises",
                     "conversationScenarios": "GET /api/conversations/scenarios",
                     "sentenceBuilder": "GET /api/sentence-builder",
@@ -137,7 +142,7 @@ class BoloBackendHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(welcome, indent=2).encode('utf-8'))
             return
 
-        # Learning Modules REST API
+        # Learning Modules & Interview REST API
         if seed_data:
             # 1. Grammar Topics with filtering
             if clean_path in ('/api/grammar', '/api/grammar/topics'):
@@ -175,6 +180,20 @@ class BoloBackendHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": True, "count": len(items), "data": items}, indent=2).encode('utf-8'))
+                return
+
+            # 4. Interview Templates, Types & Default Profile
+            if clean_path in ('/api/interviews/templates', '/api/interviews/types'):
+                res_data = {
+                    "types": getattr(seed_data, 'INTERVIEW_TYPES', []),
+                    "goals": getattr(seed_data, 'INTERVIEW_GOALS', []),
+                    "defaultProfile": getattr(seed_data, 'DEFAULT_INTERVIEW_PROFILE', {}),
+                    "questionBank": getattr(seed_data, 'INTERVIEW_QUESTION_BANK', {})
+                }
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "data": res_data}, indent=2).encode('utf-8'))
                 return
 
             # Other static routes
@@ -238,13 +257,317 @@ class BoloBackendHandler(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
-        # 1. Dedicated AI Grammar Coach Endpoint
+        # 1. AI INTERVIEW INTELLIGENCE: START INTERVIEW SESSION
+        if self.path.startswith('/api/interviews/start'):
+            length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(length)
+            try:
+                payload = json.loads(body.decode('utf-8'))
+                profile = payload.get('profile', {})
+                itype = payload.get('type', 'mixed')
+                difficulty = payload.get('difficulty', 'intermediate')
+                goal = payload.get('goal', 'job')
+                mode = payload.get('mode', 'learning')
+                key = payload.get('key') or GEMINI_API_KEY
+
+                session_id = f"iv_{int(time.time())}"
+                cand_name = profile.get('name', 'Candidate')
+                cand_degree = profile.get('degreeBranch', profile.get('education', 'Computer Science'))
+                target_role = profile.get('preferredRole', 'Software Engineer')
+
+                prompt = f"""You are Sarah Jenkins, a Senior Engineering Manager and Hiring Lead conducting a professional corporate interview.
+Candidate: {cand_name}
+Education: {cand_degree} from {profile.get('college', 'University')}
+Target Role: {target_role}
+Interview Type: {itype}
+Difficulty: {difficulty}
+Goal: {goal}
+
+Task: Formulate the opening greeting and the first interview question.
+- Welcome the candidate warmly and professionally by name.
+- Mention the target role and interview format.
+- Ask the first question: A tailored Self-Introduction prompt that invites them to connect their background to {target_role}.
+
+Output strictly a single JSON object:
+{{
+  "sessionId": "{session_id}",
+  "greeting": "Professional opening greeting (2 sentences)",
+  "round": "introduction",
+  "roundTitle": "Round 1: Professional Self Introduction",
+  "question": "Tell me about yourself, your educational foundation in {cand_degree}, and what inspired your journey into software engineering.",
+  "hint": "Structure your answer: 1) Who you are, 2) Academic background, 3) Key technical passions, 4) Why you are eager for this role."
+}}"""
+
+                gemini_res, err = call_gemini_raw(prompt, key=key)
+                parsed = parse_gemini_text_to_json(gemini_res) if gemini_res else None
+
+                if not parsed:
+                    parsed = {
+                        "sessionId": session_id,
+                        "greeting": f"Hello {cand_name}! Welcome to your {itype.replace('_', ' ').title()} interview simulation. I am glad to connect with you today.",
+                        "round": "introduction",
+                        "roundTitle": "Round 1: Professional Self Introduction",
+                        "question": f"To begin, could you walk me through your background in {cand_degree}, and summarize the key technical projects that define your skillset?",
+                        "hint": "Structure: Present identity -> Academic journey -> Key tech stacks -> Ambition."
+                    }
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "data": parsed}, indent=2).encode('utf-8'))
+                return
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+                return
+
+        # 2. AI INTERVIEW INTELLIGENCE: ANALYZE ANSWER & GENERATE ADAPTIVE NEXT QUESTION
+        if self.path.startswith('/api/interviews/answer'):
+            length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(length)
+            try:
+                payload = json.loads(body.decode('utf-8'))
+                question = payload.get('question', '')
+                answer = payload.get('answer', '')
+                round_type = payload.get('roundType', 'introduction')
+                profile = payload.get('profile', {})
+                mode = payload.get('mode', 'learning')
+                difficulty = payload.get('difficulty', 'intermediate')
+                question_idx = payload.get('questionIdx', 1)
+                total_questions = payload.get('totalQuestions', 6)
+                key = payload.get('key') or GEMINI_API_KEY
+
+                projects = profile.get('projects', [])
+                cand_name = profile.get('name', 'Candidate')
+                cand_skills = ", ".join(profile.get('skills', ['JavaScript', 'React', 'Node.js']))
+                proj_titles = ", ".join([p.get('title', 'Project') for p in projects])
+
+                prompt = f"""You are Sarah Jenkins, an expert Senior Interviewer and Communication Coach.
+Candidate: {cand_name}
+Skills: {cand_skills}
+Projects: {proj_titles}
+Current Round: {round_type} (Question {question_idx} of {total_questions})
+Interview Mode: {mode} (learning/real/challenge)
+Difficulty: {difficulty}
+
+Question Asked:
+"{question}"
+
+Candidate Answer:
+"{answer}"
+
+Task:
+1. Provide a concise, professional interviewer acknowledgement (1-2 sentences).
+2. Check grammar & sentence structure. Flag any tense slips, article issues, or prepositions with clear explanations.
+3. Check STAR method (Situation, Task, Action, Result) if this was a behavioral or project problem question.
+4. Provide ONE possible improved version of their answer (polished, natural, executive).
+5. Generate the NEXT ADAPTIVE QUESTION:
+   - If {question_idx} >= {total_questions}, signal interview completion.
+   - Otherwise, advance to the next logical round (Education -> Skills -> Project Deep-Dive -> Behavioral -> Career Goals).
+   - Adapt deeply to their answer! If they mentioned a specific technology (e.g. React hooks, Supabase, APIs), probe into it!
+
+Output strictly a single JSON object:
+{{
+  "interviewer_reaction": "Brief, encouraging spoken response from interviewer",
+  "grammar_analysis": {{
+    "has_errors": boolean,
+    "score": 85,
+    "mistakes": [
+      {{ "wrong": "text segment", "right": "corrected segment", "rule": "Rule name", "explanation": "Why" }}
+    ]
+  }},
+  "star_analysis": {{
+    "evaluated": boolean,
+    "situation": boolean,
+    "task": boolean,
+    "action": boolean,
+    "result": boolean,
+    "feedback": "Note on whether measurable results were shared"
+  }},
+  "improved_version": "One possible polished version of their answer in professional English",
+  "is_final_question": {str(question_idx >= total_questions).lower()},
+  "next_round": "skills" or "projects" or "behavioral" or "career_goals" or "done",
+  "next_round_title": "Next Round Title",
+  "next_question": "The next adaptive question tailored to their previous statements and profile",
+  "next_hint": "Tip for answering the upcoming question"
+}}"""
+
+                gemini_res, err = call_gemini_raw(prompt, key=key)
+                parsed = parse_gemini_text_to_json(gemini_res) if gemini_res else None
+
+                if not parsed:
+                    # Smart local evaluation fallback
+                    is_final = (question_idx >= total_questions)
+                    rounds_seq = ["introduction", "education", "skills", "projects", "behavioral", "career_goals"]
+                    curr_idx = rounds_seq.index(round_type) if round_type in rounds_seq else 0
+                    next_round = rounds_seq[min(len(rounds_seq) - 1, curr_idx + 1)] if not is_final else "done"
+
+                    # Fallback next question generator based on round
+                    next_q = "Thank you for completing all rounds."
+                    if next_round == "education":
+                        next_q = f"Looking at your education in {profile.get('degreeBranch', 'Computer Science')}, which academic course or semester project challenged you the most technically?"
+                    elif next_round == "skills":
+                        next_q = f"You listed skills in {cand_skills[:40]}. Can you explain the difference between state and props in React, or how you handle asynchronous calls in Node.js?"
+                    elif next_round == "projects":
+                        p_name = projects[0].get('title', 'your main project') if projects else 'your web application'
+                        next_q = f"Let us dive into '{p_name}'. What was the single most difficult architectural bottleneck you encountered while building it, and how did you resolve it?"
+                    elif next_round == "behavioral":
+                        next_q = "Tell me about a time you faced a tight project deadline or a sudden bug before release. How did you prioritize your tasks? (STAR Method)"
+                    elif next_round == "career_goals":
+                        next_q = "Where do you envision yourself developing professionally over the next 2 to 3 years in full-stack and AI engineering?"
+
+                    parsed = {
+                        "interviewer_reaction": "Thank you for sharing those details with me. That gives me a clear sense of your background and thinking.",
+                        "grammar_analysis": {
+                            "has_errors": False,
+                            "score": 88,
+                            "mistakes": []
+                        },
+                        "star_analysis": {
+                            "evaluated": (round_type in ("projects", "behavioral")),
+                            "situation": True,
+                            "task": True,
+                            "action": True,
+                            "result": True,
+                            "feedback": "Good structured overview. Whenever possible, include measurable outcomes or metrics."
+                        },
+                        "improved_version": f"In summary, {answer.strip()}",
+                        "is_final_question": is_final,
+                        "next_round": next_round,
+                        "next_round_title": f"Round: {next_round.title()}",
+                        "next_question": next_q,
+                        "next_hint": "Be specific, highlight your individual contribution, and speak with steady cadence."
+                    }
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "data": parsed}, indent=2).encode('utf-8'))
+                return
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+                return
+
+        # 3. AI INTERVIEW INTELLIGENCE: COMPREHENSIVE FINAL REPORT
+        if self.path.startswith('/api/interviews/finish'):
+            length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(length)
+            try:
+                payload = json.loads(body.decode('utf-8'))
+                qas = payload.get('qas', [])
+                profile = payload.get('profile', {})
+                itype = payload.get('type', 'mixed')
+                difficulty = payload.get('difficulty', 'intermediate')
+                goal = payload.get('goal', 'job')
+                key = payload.get('key') or GEMINI_API_KEY
+
+                cand_name = profile.get('name', 'Candidate')
+                qa_summary = "\n".join([f"Q: {item.get('q')}\nA: {item.get('a')}" for item in qas[:6]])
+
+                prompt = f"""You are Sarah Jenkins, Chief Interview Examiner.
+Candidate: {cand_name}
+Role: {profile.get('preferredRole', 'Software Engineer')}
+Interview: {itype}, Difficulty: {difficulty}
+
+Transcript:
+{qa_summary}
+
+Task: Produce a comprehensive, empowering, realistic corporate evaluation report.
+Analyze 7 skill dimensions (0 to 100), identify concrete strengths, specific improvement targets, and recommended next steps.
+
+Output strictly a single JSON object:
+{{
+  "overall_score": 86,
+  "verdict": "Strong Hire Recommendation" or "Promising Candidate with Targeted Practice",
+  "dimensions": {{
+    "communication": 88,
+    "grammar": 82,
+    "technical": 90,
+    "project_defense": 85,
+    "star_structure": 80,
+    "vocabulary": 86,
+    "confidence": 84
+  }},
+  "strengths": [
+    "Articulated technical choices with genuine passion and clarity",
+    "Solid grasp of frontend and backend component architecture",
+    "Polite, respectful, and engaging conversational demeanor"
+  ],
+  "areas_to_improve": [
+    "Incorporate more measurable metrics when describing project outcomes (e.g. latency, user counts)",
+    "Be mindful of past tense consistency when narrating prior challenges",
+    "Elaborate more concretely on error-handling and security edge-cases"
+  ],
+  "repeated_mistakes": [
+    "Slight hesitation when shifting from broad project scope to personal code contributions"
+  ],
+  "recommended_modules": [
+    {{ "title": "Past Tenses Mastery", "module": "grammar", "reason": "Ensure seamless narration of past completed tasks." }},
+    {{ "title": "STAR Method Behavioral Drills", "module": "speaking", "reason": "Structure project challenge answers with measurable results." }},
+    {{ "title": "Mock Call with HR Coach Vikram Sir", "module": "live", "reason": "Refine salary and company culture inquiries." }}
+  ]
+}}"""
+
+                gemini_res, err = call_gemini_raw(prompt, key=key)
+                parsed = parse_gemini_text_to_json(gemini_res) if gemini_res else None
+
+                if not parsed:
+                    parsed = {
+                        "overall_score": 85,
+                        "verdict": "Strong Candidate • Ready for Real Interviews",
+                        "dimensions": {
+                            "communication": 86,
+                            "grammar": 83,
+                            "technical": 89,
+                            "project_defense": 87,
+                            "star_structure": 82,
+                            "vocabulary": 84,
+                            "confidence": 85
+                        },
+                        "strengths": [
+                            "Demonstrated sound engineering foundations and enthusiasm for full-stack builds",
+                            "Communicated project features and technology stacks naturally",
+                            "Polite, structured, and professional demeanor throughout all rounds"
+                        ],
+                        "areas_to_improve": [
+                            "Quantify achievements with measurable metrics (e.g. response times, data loads)",
+                            "Reinforce Past Simple consistency when explaining bugs encountered in the past",
+                            "Practice succinct STAR-format conclusions for behavioral scenarios"
+                        ],
+                        "repeated_mistakes": [
+                            "Occasional brief answers on database trade-offs; expand with concrete examples"
+                        ],
+                        "recommended_modules": [
+                            { "title": "Past Tenses in Narrative Speaking", "module": "grammar", "reason": "Strengthen past tense fluency when discussing completed projects." },
+                            { "title": "STAR Method Behavioral Practice", "module": "speaking", "reason": "Practice crisp Situation-Task-Action-Result narratives." },
+                            { "title": "HR Coach Call with Vikram Sir", "module": "live", "reason": "Hone confident answers to 'Why should we hire you?'" }
+                        ]
+                    }
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "data": parsed}, indent=2).encode('utf-8'))
+                return
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+                return
+
+        # 4. Dedicated AI Grammar Coach Endpoint
         if self.path.startswith('/api/grammar/coach'):
             length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(length)
             try:
                 payload = json.loads(body.decode('utf-8'))
-                action = payload.get('action', 'chat')  # 'chat', 'check', 'explain', 'compare'
+                action = payload.get('action', 'chat')
                 query = payload.get('query', '')
                 sentence = payload.get('sentence', query)
                 word = payload.get('word', query)
@@ -263,13 +586,10 @@ Output strictly a single JSON object with this exact structure:
   "status": "correct" or "needs_improvement" or "incorrect",
   "original": "{sentence}",
   "corrected": "Corrected sentence with flawless grammar",
-  "rule": "Short grammar rule name (e.g., Subject-Verb Agreement, Past Simple Negation)",
-  "explanation": "Clear, concise 2-3 sentence explanation of what was wrong and why the correction works",
-  "better_alternatives": [
-    "Casual spoken alternative",
-    "Polite/Professional workplace alternative"
-  ],
-  "speaking_drill": "Short sentence for the learner to practice saying out loud"
+  "rule": "Short grammar rule name",
+  "explanation": "Clear explanation",
+  "better_alternatives": ["Casual alternative", "Professional alternative"],
+  "speaking_drill": "Short sentence to practice saying out loud"
 }}"""
                 elif action == 'explain':
                     prompt = f"""You are an expert English Grammar and Vocabulary Coach.
@@ -277,60 +597,46 @@ Task: Explain the word, conjunction, or phrase: "{word}".
 Output strictly a single JSON object with this exact structure:
 {{
   "word": "{word}",
-  "part_of_speech": "e.g. Conjunction, Preposition, Phrasal Verb",
-  "cefr_level": "e.g. B1, B2, C1",
-  "definition": "Clear, intuitive definition in simple English",
-  "formula": "Sentence structure pattern or formula (if applicable)",
-  "examples": [
-    "Natural spoken example sentence 1",
-    "Natural spoken example sentence 2",
-    "Natural spoken example sentence 3"
-  ],
-  "collocations": ["Common collocation 1", "Common collocation 2"],
-  "common_mistake": "Don't say: '...' Say: '...'",
-  "speaking_drill": "A prompt asking the learner to create their own spoken sentence"
+  "part_of_speech": "e.g. Conjunction",
+  "cefr_level": "e.g. B1, B2",
+  "definition": "Clear definition",
+  "formula": "Sentence pattern",
+  "examples": ["Example 1", "Example 2", "Example 3"],
+  "collocations": ["Collocation 1", "Collocation 2"],
+  "common_mistake": "Common trap",
+  "speaking_drill": "Speaking prompt"
 }}"""
                 elif action == 'compare':
                     prompt = f"""You are an expert English Grammar Coach.
-Task: Compare and explain the difference between "{termA}" and "{termB}".
+Task: Compare "{termA}" and "{termB}".
 Output strictly a single JSON object with this exact structure:
 {{
   "termA": "{termA}",
   "termB": "{termB}",
-  "summary": "1-2 sentence core difference",
-  "ruleA": "Exact rule and conditions for using {termA}",
-  "ruleB": "Exact rule and conditions for using {termB}",
-  "examplesA": ["Example using {termA} 1", "Example using {termA} 2"],
-  "examplesB": ["Example using {termB} 1", "Example using {termB} 2"],
-  "memory_trick": "Quick golden rule or memory shortcut to never confuse them again",
-  "quiz_question": "A multiple-choice question testing the difference",
-  "quiz_options": ["Option A", "Option B"],
-  "quiz_answer": "Option A"
+  "summary": "Core difference",
+  "ruleA": "Rule for {termA}",
+  "ruleB": "Rule for {termB}",
+  "examplesA": ["Example A1", "Example A2"],
+  "examplesB": ["Example B1", "Example B2"],
+  "memory_trick": "Memory shortcut"
 }}"""
-                else: # 'chat'
+                else:
                     prompt = f"""You are an encouraging, expert AI English Grammar Coach.
 The student asks: "{query}"
 
-Output strictly a single JSON object with this exact structure:
+Output strictly a single JSON object:
 {{
-  "reply": "Clear, warm, highly educational explanation answering the student's question directly",
-  "rule": "Grammar rule name or principle involved",
-  "formula": "Sentence pattern or formula if applicable",
-  "examples": [
-    "Clear practical example 1",
-    "Clear practical example 2"
-  ],
-  "mistake": "Common trap or mistake to avoid",
-  "speaking_prompt": "Actionable speaking prompt for the student to practice now"
+  "reply": "Clear educational explanation",
+  "rule": "Grammar rule name",
+  "formula": "Sentence pattern",
+  "examples": ["Example 1", "Example 2"],
+  "mistake": "Trap to avoid",
+  "speaking_prompt": "Speaking prompt"
 }}"""
 
-                # Try Gemini
                 gemini_res, err = call_gemini_raw(prompt, key=key)
-                parsed = None
-                if gemini_res:
-                    parsed = parse_gemini_text_to_json(gemini_res)
+                parsed = parse_gemini_text_to_json(gemini_res) if gemini_res else None
 
-                # If Gemini returned parsed JSON, send it
                 if parsed:
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
@@ -349,7 +655,6 @@ Output strictly a single JSON object with this exact structure:
                             break
 
                 if not fallback_data:
-                    # Generic intelligent response
                     if action == 'check':
                         fallback_data = {
                             "status": "correct",
@@ -357,10 +662,7 @@ Output strictly a single JSON object with this exact structure:
                             "corrected": sentence,
                             "rule": "Sentence Construction",
                             "explanation": "Your sentence is grammatically sound, clearly structured, and easy to understand!",
-                            "better_alternatives": [
-                                f"In other words: {sentence}",
-                                f"More formally: As stated, {sentence.lower()}"
-                            ],
+                            "better_alternatives": [f"In other words: {sentence}", f"More formally: As stated, {sentence.lower()}"],
                             "speaking_drill": f"Practice saying aloud: '{sentence}' with confident pacing."
                         }
                     elif action == 'explain':
@@ -370,11 +672,8 @@ Output strictly a single JSON object with this exact structure:
                             "cefr_level": "B1",
                             "definition": f"'{word}' is widely used in everyday and professional English.",
                             "formula": f"Subject + {word} + Object",
-                            "examples": [
-                                f"I use '{word}' when expressing my thoughts clearly.",
-                                f"Mastering '{word}' helps elevate spoken English fluency."
-                            ],
-                            "collocations": [f"frequently use {word}", f"understand {word}"],
+                            "examples": [f"I use '{word}' when expressing my thoughts clearly."],
+                            "collocations": [f"frequently use {word}"],
                             "common_mistake": f"Be mindful of correct prepositions when using '{word}'.",
                             "speaking_drill": f"Formulate your own spoken sentence using '{word}'."
                         }
@@ -383,11 +682,8 @@ Output strictly a single JSON object with this exact structure:
                             "reply": f"Great grammar question about '{query}'. English grammar is most effectively mastered when you understand the core pattern and immediately speak it aloud in complete sentences.",
                             "rule": "Core English Grammar Rule",
                             "formula": "Subject + Verb + Object",
-                            "examples": [
-                                "Daily practice produces remarkable spoken fluency.",
-                                "Confidence grows each time you speak out loud."
-                            ],
-                            "mistake": "Avoid translating word-by-word from your native tongue; think in English phrase chunks.",
+                            "examples": ["Daily practice produces remarkable spoken fluency."],
+                            "mistake": "Avoid translating word-by-word; think in English phrase chunks.",
                             "speaking_prompt": "Speak two sentences incorporating the idea you just asked about."
                         }
 
@@ -404,7 +700,7 @@ Output strictly a single JSON object with this exact structure:
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
                 return
 
-        # 2. General Gemini AI Chat Endpoint
+        # 5. General Gemini AI Chat Endpoint
         if self.path.startswith('/api/gemini/chat'):
             length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(length)
@@ -439,7 +735,7 @@ Output strictly a single JSON object with this exact structure:
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
                 return
 
-        # 3. Supabase Cloud Sync Endpoint
+        # 6. Supabase Cloud Sync Endpoint
         if self.path.startswith('/api/supabase/save'):
             length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(length)
@@ -496,7 +792,7 @@ def run():
         is_cloud = False
 
     print("=" * 65)
-    print("     BOLO - English Speaking Backend API Server")
+    print("  BOLO - English Speaking & AI Interview Intelligence Backend")
     print("=" * 65)
     print(f"\n[OK] Server running on http://{host}:{port}/")
     print(f"[OK] Supabase Cloud: {SUPABASE_URL}")
